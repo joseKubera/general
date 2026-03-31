@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard de Ventas · SANCORFASHION &amp; BEKURA</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" />
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="header-left">
+      <div class="logo">📊</div>
+      <div>
+        <h1 class="header-title">Dashboard de Ventas</h1>
+        <p class="header-sub">MercadoLibre · Odoo ERP</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <span class="badge badge-sf">SANCORFASHION</span>
+      <span class="badge badge-bk">BEKURA</span>
+      <div class="header-time">
+        <span id="clock">--:--</span>
+        <span id="today-date">--</span>
+      </div>
+      <button class="refresh-btn" onclick="refreshData()" title="Actualizar datos">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+        </svg>
+        Actualizar
+      </button>
+    </div>
+  </header>
+
+  <main class="main">
+
+    <!-- LOADING OVERLAY -->
+    <div id="loading-overlay" class="loading-overlay">
+      <div class="loader-wrap">
+        <div class="spinner"></div>
+        <p>Cargando datos…</p>
+      </div>
+    </div>
+
+    <!-- ERROR BANNER -->
+    <div id="error-banner" class="error-banner hidden"></div>
+
+    <!-- KPI CARDS -->
+    <section class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">Ventas del Mes</div>
+        <div class="kpi-value" id="kpi-sales">$0</div>
+        <div class="kpi-sub" id="kpi-period">--</div>
+        <div class="kpi-accounts">
+          <span class="dot sf"></span><span id="kpi-sf-sales">SF $0</span>
+          <span class="dot bk"></span><span id="kpi-bk-sales">BK $0</span>
+        </div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-label">Órdenes Totales</div>
+        <div class="kpi-value" id="kpi-orders">0</div>
+        <div class="kpi-sub" id="kpi-orders-sub">--</div>
+        <div class="kpi-accounts">
+          <span class="dot sf"></span><span id="kpi-sf-orders">SF 0</span>
+          <span class="dot bk"></span><span id="kpi-bk-orders">BK 0</span>
+        </div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-label">Ticket Promedio</div>
+        <div class="kpi-value" id="kpi-ticket">$0</div>
+        <div class="kpi-sub">Por orden</div>
+        <div class="kpi-accounts">
+          <span class="dot sf"></span><span id="kpi-sf-ticket">SF $0</span>
+          <span class="dot bk"></span><span id="kpi-bk-ticket">BK $0</span>
+        </div>
+      </div>
+
+      <div class="kpi-card goal-card">
+        <div class="kpi-label">Meta <span id="goal-month-label">Abril 2026</span></div>
+        <div class="kpi-value" id="goal-current">$0</div>
+        <div class="progress-wrap">
+          <div class="progress-bar">
+            <div class="progress-fill" id="goal-bar" style="width:0%"></div>
+          </div>
+          <span class="progress-pct" id="goal-pct">0%</span>
+        </div>
+        <div class="goal-meta">
+          <span>Meta: <strong id="goal-target">$14,000,000</strong></span>
+          <span>Falta: <strong id="goal-remaining">$14,000,000</strong></span>
+        </div>
+        <div class="goal-daily" id="goal-daily">
+          Necesitas <strong id="needed-per-day">$466,667</strong>/día
+        </div>
+      </div>
+    </section>
+
+    <!-- CHARTS ROW -->
+    <section class="charts-grid">
+      <div class="card chart-card">
+        <div class="card-header">
+          <h3>Ventas Mensuales</h3>
+          <div class="legend">
+            <span class="legend-dot sf"></span>SANCORFASHION
+            <span class="legend-dot bk"></span>BEKURA
+          </div>
+        </div>
+        <canvas id="chart-monthly" height="280"></canvas>
+      </div>
+
+      <div class="card chart-card">
+        <div class="card-header">
+          <h3>Tasa de Conversión Diaria <span class="badge-small">30 días</span></h3>
+          <div class="legend">
+            <span class="legend-dot sf"></span>SF
+            <span class="legend-dot bk"></span>BK
+            <span class="legend-dot total"></span>Total
+          </div>
+        </div>
+        <canvas id="chart-conversion" height="280"></canvas>
+      </div>
+    </section>
+
+    <!-- TODAY CONVERSION STATS -->
+    <section class="conv-stats-row">
+      <div class="conv-stat">
+        <div class="conv-stat-label">Conversión Hoy (SF)</div>
+        <div class="conv-stat-value" id="conv-today-sf">—</div>
+      </div>
+      <div class="conv-stat">
+        <div class="conv-stat-label">Conversión Hoy (BK)</div>
+        <div class="conv-stat-value" id="conv-today-bk">—</div>
+      </div>
+      <div class="conv-stat">
+        <div class="conv-stat-label">Conversión Promedio 30d</div>
+        <div class="conv-stat-value" id="conv-avg">—</div>
+      </div>
+      <div class="conv-stat">
+        <div class="conv-stat-label">Visitas Hoy (Total)</div>
+        <div class="conv-stat-value" id="visits-today">—</div>
+      </div>
+    </section>
+
+    <!-- PRODUCTS ROW -->
+    <section class="tables-grid">
+      <div class="card">
+        <div class="card-header">
+          <h3>🔥 Top Productos Más Vendidos</h3>
+          <span class="badge-small">Mes actual</span>
+        </div>
+        <table class="data-table" id="table-top">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Producto</th>
+              <th>Cuenta</th>
+              <th>Unidades</th>
+              <th>Revenue</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-top">
+            <tr><td colspan="5" class="empty-row">Cargando…</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h3>🐢 Slow Motion Products</h3>
+          <span class="badge-small">Últimos 30 días · &lt; 3 unidades</span>
+        </div>
+        <table class="data-table" id="table-slow">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Producto</th>
+              <th>Cuenta</th>
+              <th>Vendidos</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-slow">
+            <tr><td colspan="4" class="empty-row">Cargando…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- INVENTORY / ODOO -->
+    <section class="inventory-section">
+      <div class="card-header" style="margin-bottom:1rem">
+        <h3>📦 Inventario · Odoo ERP</h3>
+        <span id="odoo-status-badge" class="badge-status">Conectando…</span>
+      </div>
+      <div class="inv-grid">
+        <div class="inv-card">
+          <div class="inv-icon">💰</div>
+          <div class="inv-label">Valor de Inventario</div>
+          <div class="inv-value" id="inv-value">$0</div>
+          <div class="inv-sub" id="inv-units">0 unidades · 0 productos</div>
+        </div>
+
+        <div class="inv-card">
+          <div class="inv-icon">🔄</div>
+          <div class="inv-label">Rotación de Inventario</div>
+          <div class="inv-value" id="inv-rotation">0%</div>
+          <div class="inv-sub">Ventas vs Inventario</div>
+        </div>
+
+        <div class="inv-card">
+          <div class="inv-icon">📈</div>
+          <div class="inv-label">Ventas Odoo (Mes)</div>
+          <div class="inv-value" id="inv-sales">$0</div>
+          <div class="inv-sub">Órdenes confirmadas</div>
+        </div>
+
+        <div class="inv-card rotation-gauge">
+          <div class="inv-label">Rotación Visual</div>
+          <canvas id="chart-rotation" width="180" height="180"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+      Última actualización: <span id="last-updated">--</span> &nbsp;·&nbsp;
+      Caché: 5 min &nbsp;·&nbsp; ifullmx-brea.odoo.com
+    </footer>
+
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+  <script src="/static/app.js"></script>
+</body>
+</html>
