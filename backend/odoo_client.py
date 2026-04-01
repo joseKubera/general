@@ -2,6 +2,7 @@ import xmlrpc.client
 import asyncio
 import logging
 import os
+import ssl
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -26,7 +27,10 @@ class OdooClient:
         self._uid: Optional[int] = None
 
     def _authenticate(self) -> int:
-        common = xmlrpc.client.ServerProxy(f"{self.url}/xmlrpc/2/common", allow_none=True)
+        ssl_ctx = ssl.create_default_context()
+        ssl_ctx.check_hostname = False
+        ssl_ctx.verify_mode = ssl.CERT_NONE
+        common = xmlrpc.client.ServerProxy(f"{self.url}/xmlrpc/2/common", allow_none=True, context=ssl_ctx)
         uid = common.authenticate(self.db, self.username, self.password, {})
         if not uid:
             raise Exception("Odoo authentication failed")
@@ -39,7 +43,10 @@ class OdooClient:
 
     def _execute(self, model: str, method: str, *args, **kwargs):
         uid = self._get_uid()
-        models = xmlrpc.client.ServerProxy(f"{self.url}/xmlrpc/2/object", allow_none=True)
+        ssl_ctx = ssl.create_default_context()
+        ssl_ctx.check_hostname = False
+        ssl_ctx.verify_mode = ssl.CERT_NONE
+        models = xmlrpc.client.ServerProxy(f"{self.url}/xmlrpc/2/object", allow_none=True, context=ssl_ctx)
         return models.execute_kw(self.db, uid, self.password, model, method, list(args), kwargs)
 
     def _get_inventory_value_sync(self) -> dict:
