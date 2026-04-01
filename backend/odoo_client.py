@@ -73,11 +73,11 @@ class OdooClient:
         try:
             orders = self._execute(
                 "sale.order", "search_read",
-                [[
+                [
                     ["state", "in", ["sale", "done"]],
                     ["date_order", ">=", date_from.strftime("%Y-%m-%d %H:%M:%S")],
                     ["date_order", "<=", date_to.strftime("%Y-%m-%d %H:%M:%S")],
-                ]],
+                ],
                 fields=["id", "amount_total", "date_order"],
                 limit=10000,
             )
@@ -94,11 +94,11 @@ class OdooClient:
         try:
             lines = self._execute(
                 "sale.order.line", "search_read",
-                [[
+                [
                     ["order_id.state", "in", ["sale", "done"]],
                     ["order_id.date_order", ">=", date_from.strftime("%Y-%m-%d %H:%M:%S")],
                     ["order_id.date_order", "<=", date_to.strftime("%Y-%m-%d %H:%M:%S")],
-                ]],
+                ],
                 fields=["product_id", "product_uom_qty", "price_subtotal"],
                 limit=50000,
             )
