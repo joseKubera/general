@@ -22,8 +22,10 @@ INITIAL_TOKENS = {
     },
     "BEKURA": {
         "seller_id": "3072519654",
-        "access_token": "APP_USR-8902165405612832-033112-1fc32ceb54ed9e31d459246dbee86831-3072519654",
-        "refresh_token": "TG-69cbf444d19bf40001f615e1-3072519654",
+        "client_id": "1446854968053102",
+        "client_secret": "3gLYwL3F4NNbiwBu7itmRdRodyWMPtAM",
+        "access_token": "APP_USR-1446854968053102-040118-4f121252ff358c743c23542e39a70876-3072519654",
+        "refresh_token": "TG-69cd96076cea8b00015eecdc-3072519654",
     },
     "SANCORPE": {
         "seller_id": "3064478475",
