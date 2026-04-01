@@ -82,6 +82,8 @@ function renderKPIs(data) {
 
 // ── Daily Sales Chart ─────────────────────────────────────────────────────
 function renderDailySalesChart(dailyRevenue, days, acct) {
+  console.log('[DailyChart] total entries:', dailyRevenue.length, '| slice days:', days, '| acct:', acct);
+  console.log('[DailyChart] sample:', dailyRevenue.slice(-3));
   const slice = dailyRevenue.slice(-days);
   const labels = slice.map(d => d.date.slice(5)); // MM-DD
 

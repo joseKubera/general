@@ -105,8 +105,8 @@ body { background: var(--bg); color: var(--text); font-family: 'Inter', system-u
 
 /* ── Charts Grid ─────────────────────────────────────────────────────────── */
 .charts-grid { display: grid; grid-template-columns: 1.1fr 1fr; gap: 1rem; }
-.chart-card { min-height: 360px; }
-.chart-full { min-height: 300px; }
+.chart-card { min-height: 0; }
+.chart-full { min-height: 0; }
 .legend { display: flex; align-items: center; gap: .6rem; font-size: .72rem; color: var(--text-muted); flex-wrap: wrap; }
 .legend-dot { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
 .legend-dot.sf { background: var(--sf); }
