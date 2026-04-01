@@ -25,6 +25,13 @@ INITIAL_TOKENS = {
         "access_token": "APP_USR-8902165405612832-033112-1fc32ceb54ed9e31d459246dbee86831-3072519654",
         "refresh_token": "TG-69cbf444d19bf40001f615e1-3072519654",
     },
+    "SANCORPE": {
+        "seller_id": "3064478475",
+        "client_id": "1267116183141414",
+        "client_secret": "ft0DDiYMn6RLONN1RO5mkM4cwY0X2gbn",
+        "access_token": "APP_USR-1267116183141414-040117-084c6b5471f39b00871e17fc0d65039f-3064478475",
+        "refresh_token": "TG-69cd93a4bc1d470001ae5c60-3064478475",
+    },
 }
 
 
@@ -45,14 +52,17 @@ class MLClient:
             json.dump(tokens, f, indent=2)
 
     async def refresh_token(self, account: str) -> str:
-        refresh_token = self.tokens[account]["refresh_token"]
+        acct = self.tokens[account]
+        refresh_token = acct["refresh_token"]
+        client_id = acct.get("client_id", APP_ID)
+        client_secret = acct.get("client_secret", SECRET_KEY)
         async with aiohttp.ClientSession(timeout=self._timeout) as session:
             async with session.post(
                 f"{BASE_URL}/oauth/token",
                 data={
                     "grant_type": "refresh_token",
-                    "client_id": APP_ID,
-                    "client_secret": SECRET_KEY,
+                    "client_id": client_id,
+                    "client_secret": client_secret,
                     "refresh_token": refresh_token,
                 },
             ) as resp:
