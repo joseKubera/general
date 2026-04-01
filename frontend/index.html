@@ -99,8 +99,53 @@
       </div>
     </section>
 
-    <!-- CHARTS ROW -->
+    <!-- DAILY SALES CHART -->
+    <section class="card chart-card chart-full">
+      <div class="card-header">
+        <h3>Ventas Diarias</h3>
+        <div class="chart-filters">
+          <div class="filter-group">
+            <button class="filter-btn active" data-days="7">7d</button>
+            <button class="filter-btn" data-days="14">14d</button>
+            <button class="filter-btn" data-days="30">30d</button>
+          </div>
+          <div class="filter-group">
+            <button class="filter-btn acct-btn active" data-acct="total">Todas</button>
+            <button class="filter-btn acct-btn" data-acct="sf">SF</button>
+            <button class="filter-btn acct-btn" data-acct="bk">BK</button>
+          </div>
+        </div>
+      </div>
+      <canvas id="chart-daily" height="220"></canvas>
+    </section>
+
+    <!-- GOAL RADAR + MONTHLY TREND -->
     <section class="charts-grid">
+      <div class="card chart-card">
+        <div class="card-header">
+          <h3>Radar de Meta · <span id="goal-month-label">Abril 2026</span></h3>
+        </div>
+        <canvas id="chart-radar" height="280"></canvas>
+        <div class="pace-grid">
+          <div class="pace-card">
+            <div class="pace-label">Venta/día actual</div>
+            <div class="pace-value" id="pace-actual-day">$0</div>
+          </div>
+          <div class="pace-card">
+            <div class="pace-label">Venta/día necesaria</div>
+            <div class="pace-value" id="pace-needed-day">$0</div>
+          </div>
+          <div class="pace-card">
+            <div class="pace-label">Proyección al cierre</div>
+            <div class="pace-value" id="pace-projection">$0</div>
+          </div>
+          <div class="pace-card">
+            <div class="pace-label">Ritmo</div>
+            <div class="pace-value" id="pace-ratio">0%</div>
+          </div>
+        </div>
+      </div>
+
       <div class="card chart-card">
         <div class="card-header">
           <h3>Ventas Mensuales</h3>
@@ -111,18 +156,19 @@
         </div>
         <canvas id="chart-monthly" height="280"></canvas>
       </div>
+    </section>
 
-      <div class="card chart-card">
-        <div class="card-header">
-          <h3>Tasa de Conversión Diaria <span class="badge-small">30 días</span></h3>
-          <div class="legend">
-            <span class="legend-dot sf"></span>SF
-            <span class="legend-dot bk"></span>BK
-            <span class="legend-dot total"></span>Total
-          </div>
+    <!-- CONVERSION CHART -->
+    <section class="card chart-card chart-full">
+      <div class="card-header">
+        <h3>Tasa de Conversión Diaria <span class="badge-small">30 días</span></h3>
+        <div class="legend">
+          <span class="legend-dot sf"></span>SF
+          <span class="legend-dot bk"></span>BK
+          <span class="legend-dot total"></span>Total
         </div>
-        <canvas id="chart-conversion" height="280"></canvas>
       </div>
+      <canvas id="chart-conversion" height="220"></canvas>
     </section>
 
     <!-- TODAY CONVERSION STATS -->

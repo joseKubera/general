@@ -7,6 +7,13 @@ const REFRESH_INTERVAL = 5 * 60 * 1000; // 5 min
 let chartMonthly = null;
 let chartConversion = null;
 let chartRotation = null;
+let chartDaily = null;
+let chartRadar = null;
+
+// Filter state
+let filterDays = 7;
+let filterAcct = 'total';
+let _lastDailyRevenue = [];
 
 // ── Utilities ─────────────────────────────────────────────────────────────
 const fmt = (n, style = 'currency', decimals = 0) =>
@@ -71,6 +78,119 @@ function renderKPIs(data) {
   const pct = Math.min(100, goal.percentage || 0);
   el('goal-bar').style.width = pct + '%';
   el('goal-pct').textContent = pct.toFixed(1) + '%';
+}
+
+// ── Daily Sales Chart ─────────────────────────────────────────────────────
+function renderDailySalesChart(dailyRevenue, days, acct) {
+  const slice = dailyRevenue.slice(-days);
+  const labels = slice.map(d => d.date.slice(5)); // MM-DD
+
+  const datasets = [];
+  if (acct === 'total' || acct === 'sf') {
+    datasets.push({
+      label: 'SANCORFASHION',
+      data: slice.map(d => d.sf),
+      backgroundColor: 'rgba(129,140,248,.75)',
+      borderColor: '#818cf8',
+      borderWidth: 1,
+      borderRadius: 5,
+    });
+  }
+  if (acct === 'total' || acct === 'bk') {
+    datasets.push({
+      label: 'BEKURA',
+      data: slice.map(d => d.bk),
+      backgroundColor: 'rgba(52,211,153,.65)',
+      borderColor: '#34d399',
+      borderWidth: 1,
+      borderRadius: 5,
+    });
+  }
+
+  const ctx = el('chart-daily').getContext('2d');
+  if (chartDaily) chartDaily.destroy();
+  chartDaily = new Chart(ctx, {
+    type: 'bar',
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: datasets.length > 1, labels: { color: '#94a3b8', font: { size: 11 } } },
+        tooltip: {
+          callbacks: { label: c => ` ${c.dataset.label}: ${fmtFull(c.raw)}` },
+        },
+      },
+      scales: {
+        x: { stacked: true, ticks: { color: '#64748b', font: { size: 10 }, maxTicksLimit: 14 }, grid: { color: 'rgba(255,255,255,.04)' } },
+        y: { stacked: true, ticks: { color: '#64748b', font: { size: 11 }, callback: v => fmt(v) }, grid: { color: 'rgba(255,255,255,.06)' } },
+      },
+    },
+  });
+}
+
+// ── Goal Radar Chart ──────────────────────────────────────────────────────
+function renderGoalRadar(goal) {
+  const pct        = Math.min(100, goal.percentage || 0);
+  const paceRatio  = Math.min(100, goal.pace_ratio || 0);
+  const sfPct      = Math.min(100, (goal.sf_pct || 0) * (100 / Math.max(1, goal.percentage || 1)));
+  const bkPct      = Math.min(100, (goal.bk_pct || 0) * (100 / Math.max(1, goal.percentage || 1)));
+  const daysUsedPct = Math.min(100, ((goal.days_elapsed || 0) / 30) * 100);
+
+  const ctx = el('chart-radar').getContext('2d');
+  if (chartRadar) chartRadar.destroy();
+  chartRadar = new Chart(ctx, {
+    type: 'radar',
+    data: {
+      labels: ['% Meta', 'Ritmo diario', 'Días usados', 'Aporte SF', 'Aporte BK'],
+      datasets: [
+        {
+          label: 'Actual',
+          data: [pct, paceRatio, daysUsedPct, sfPct * (pct / 100), bkPct * (pct / 100)],
+          backgroundColor: 'rgba(129,140,248,.15)',
+          borderColor: '#818cf8',
+          pointBackgroundColor: '#818cf8',
+          borderWidth: 2,
+          pointRadius: 4,
+        },
+        {
+          label: 'Objetivo',
+          data: [100, 100, 100, 100, 100],
+          backgroundColor: 'rgba(255,255,255,.03)',
+          borderColor: 'rgba(255,255,255,.15)',
+          borderWidth: 1,
+          borderDash: [4, 4],
+          pointRadius: 0,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: c => ` ${c.dataset.label}: ${c.raw.toFixed(1)}%` } },
+      },
+      scales: {
+        r: {
+          min: 0, max: 100,
+          ticks: { display: false },
+          grid: { color: 'rgba(255,255,255,.08)' },
+          pointLabels: { color: '#94a3b8', font: { size: 11 } },
+          angleLines: { color: 'rgba(255,255,255,.08)' },
+        },
+      },
+    },
+  });
+
+  // Pace cards
+  el('pace-actual-day').textContent  = fmt(goal.actual_per_day || 0);
+  el('pace-needed-day').textContent  = fmt(goal.needed_per_day || 0);
+  el('pace-projection').textContent  = fmt(goal.projection || 0);
+  const ratio = goal.pace_ratio || 0;
+  const ratioEl = el('pace-ratio');
+  ratioEl.textContent = ratio.toFixed(1) + '%';
+  ratioEl.style.color = ratio >= 100 ? '#10b981' : ratio >= 80 ? '#f59e0b' : '#f87171';
 }
 
 // ── Monthly Trend Chart ───────────────────────────────────────────────────
@@ -324,7 +444,10 @@ function renderGauge(pct) {
 
 // ── Main Render ───────────────────────────────────────────────────────────
 function render(data) {
+  _lastDailyRevenue = data.daily_revenue || [];
   renderKPIs(data);
+  renderDailySalesChart(_lastDailyRevenue, filterDays, filterAcct);
+  renderGoalRadar(data.goal || {});
   renderMonthlyChart(data.monthly_trend || []);
   renderConversionChart(data.daily_conversion || []);
   renderTopProducts(data.top_products || []);
@@ -336,6 +459,25 @@ function render(data) {
     ? new Date(meta.updated_at).toLocaleString('es-MX') + (meta.from_cache ? ' (caché)' : ' (fresco)')
     : '--';
 }
+
+// ── Filter buttons ────────────────────────────────────────────────────────
+document.querySelectorAll('.filter-btn[data-days]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn[data-days]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    filterDays = parseInt(btn.dataset.days);
+    renderDailySalesChart(_lastDailyRevenue, filterDays, filterAcct);
+  });
+});
+
+document.querySelectorAll('.filter-btn[data-acct]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn[data-acct]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    filterAcct = btn.dataset.acct;
+    renderDailySalesChart(_lastDailyRevenue, filterDays, filterAcct);
+  });
+});
 
 // ── Fetch & Refresh ───────────────────────────────────────────────────────
 async function fetchData(force = false) {

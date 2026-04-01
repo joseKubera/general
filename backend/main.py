@@ -72,6 +72,7 @@ async def dashboard():
     try:
         (
             sf_orders_month, bk_orders_month,
+            sf_orders_30d, bk_orders_30d,
             sf_trend, bk_trend,
             sf_conv, bk_conv,
             sf_top, bk_top,
@@ -81,6 +82,8 @@ async def dashboard():
             asyncio.gather(
                 ml.get_orders("SANCORFASHION", month_start, now),
                 ml.get_orders("BEKURA", month_start, now),
+                ml.get_orders("SANCORFASHION", last_30, now),
+                ml.get_orders("BEKURA", last_30, now),
                 ml.get_monthly_trend("SANCORFASHION", months=6),
                 ml.get_monthly_trend("BEKURA", months=6),
                 ml.get_daily_conversion("SANCORFASHION", days=30),
@@ -101,7 +104,7 @@ async def dashboard():
         return demo
 
     # If all ML calls failed (no network), fallback to demo
-    all_failed = all(isinstance(r, Exception) for r in [sf_orders_month, bk_orders_month, sf_trend, bk_trend])
+    all_failed = all(isinstance(r, Exception) for r in [sf_orders_month, bk_orders_month, sf_orders_30d, bk_orders_30d, sf_trend, bk_trend])
     if all_failed:
         logger.warning("All ML API calls failed, serving demo data")
         demo = get_demo_dashboard()
@@ -127,10 +130,12 @@ async def dashboard():
     else:
         goal_current = 0.0
 
-    days_in_april = 30
+    days_in_month = 30
     days_elapsed = max(1, now.day) if (now.month == GOAL_MONTH_NUM and now.year == GOAL_YEAR) else 0
-    days_remaining = days_in_april - days_elapsed
-    needed_per_day = round((MONTHLY_GOAL - goal_current) / max(1, days_remaining), 2)
+    days_remaining = max(1, days_in_month - days_elapsed)
+    needed_per_day = round((MONTHLY_GOAL - goal_current) / days_remaining, 2)
+    actual_per_day = round(goal_current / max(1, days_elapsed), 2)
+    projection = round(actual_per_day * days_in_month, 2)
 
     goal_info = {
         "amount": MONTHLY_GOAL,
@@ -141,7 +146,38 @@ async def dashboard():
         "days_elapsed": days_elapsed,
         "days_remaining": days_remaining,
         "needed_per_day": needed_per_day,
+        "actual_per_day": actual_per_day,
+        "needed_per_week": round(needed_per_day * 7, 2),
+        "actual_per_week": round(actual_per_day * 7, 2),
+        "projection": projection,
+        "pace_ratio": round(actual_per_day / needed_per_day * 100, 1) if needed_per_day > 0 else 100,
+        "sf_pct": round(sf_kpi["sales"] / MONTHLY_GOAL * 100, 2),
+        "bk_pct": round(bk_kpi["sales"] / MONTHLY_GOAL * 100, 2),
     }
+
+    # ── Daily revenue (last 30 days) ────────────────────────────────────────
+    rev_map: dict = {}
+    for o in (_safe(sf_orders_30d, []) or []):
+        d = (o.get("date_created") or "")[:10]
+        if d:
+            rev_map.setdefault(d, {"date": d, "sf": 0.0, "bk": 0.0})
+            rev_map[d]["sf"] += o.get("total_amount", 0) or 0
+    for o in (_safe(bk_orders_30d, []) or []):
+        d = (o.get("date_created") or "")[:10]
+        if d:
+            rev_map.setdefault(d, {"date": d, "sf": 0.0, "bk": 0.0})
+            rev_map[d]["bk"] += o.get("total_amount", 0) or 0
+
+    daily_revenue = []
+    for i in range(29, -1, -1):
+        d = (now - timedelta(days=i)).strftime("%Y-%m-%d")
+        entry = rev_map.get(d, {"date": d, "sf": 0.0, "bk": 0.0})
+        daily_revenue.append({
+            "date": d,
+            "sf": round(entry["sf"], 2),
+            "bk": round(entry["bk"], 2),
+            "total": round(entry["sf"] + entry["bk"], 2),
+        })
 
     # ── Monthly trend (merge both accounts) ─────────────────────────────────
     trend_map: dict = {}
@@ -221,6 +257,7 @@ async def dashboard():
             },
         },
         "goal": goal_info,
+        "daily_revenue": daily_revenue,
         "monthly_trend": monthly_trend,
         "daily_conversion": conv_list,
         "top_products": top_products,
