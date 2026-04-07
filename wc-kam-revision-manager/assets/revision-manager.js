@@ -491,37 +491,45 @@
             return;
         }
 
-        const cards = variations.map(v => {
-            const attrsHtml = (v.attributes || [])
-                .map(a => `<span class="rm-attr-chip"><b>${escHtml(a.name)}:</b> ${escHtml(a.option)}</span>`)
-                .join('');
+        const sections = variations.map(v => {
+            // Build section title from attribute values (e.g. "AZUL MARINO · 29 GALLERY")
+            const titleParts = (v.attributes || []).map(a => a.option.toUpperCase());
+            const title      = titleParts.join(' · ') + ' GALLERY';
 
             const imgHtml = v.image_url
-                ? `<img src="${escHtml(v.image_url)}" class="rm-var-thumb" alt="">`
-                : `<div class="rm-var-thumb rm-var-thumb-empty">📷</div>`;
+                ? `<img src="${escHtml(v.image_url)}" class="rm-var-gal-img" alt="" data-img-id="${escHtml(v.image_id)}">`
+                : '';
 
-            return `<div class="rm-var-card" data-var-id="${v.id}" data-parent-id="${pid}" data-gallery-key="${escHtml(v.gallery_key)}">
-                <div class="rm-var-img-wrap">
-                    ${imgHtml}
-                    <button class="rm-var-img-btn" data-var-id="${v.id}" data-parent-id="${pid}" data-gallery-key="${escHtml(v.gallery_key)}" title="Cambiar imagen">📷</button>
+            const skuLabel = v.sku ? `<span class="rm-var-gal-sku">${escHtml(v.sku)}</span>` : '';
+
+            return `<div class="rm-var-gallery-section" data-var-id="${v.id}" data-parent-id="${pid}" data-gallery-key="${escHtml(v.gallery_key)}">
+                <div class="rm-var-gal-header">
+                    <span class="rm-var-gal-title">${escHtml(title)}</span>
+                    ${skuLabel}
+                    <button class="rm-var-gal-delete" data-parent-id="${pid}" data-gallery-key="${escHtml(v.gallery_key)}" title="Quitar imagen">Delete</button>
                 </div>
-                <div class="rm-var-info">
-                    <span class="rm-var-sku">${escHtml(v.sku || '—')}</span>
-                    <div class="rm-var-attrs">${attrsHtml}</div>
-                    <span class="rm-var-key">key: <code>${escHtml(v.gallery_key)}</code></span>
+                <div class="rm-var-gal-body">
+                    <div class="rm-var-gal-thumbs" id="rm-var-gal-thumbs-${v.id}">
+                        ${imgHtml}
+                    </div>
+                    <button class="rm-var-gal-add" data-var-id="${v.id}" data-parent-id="${pid}" data-gallery-key="${escHtml(v.gallery_key)}" title="Elegir imagen">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                        <span>Add images</span>
+                    </button>
                 </div>
             </div>`;
         }).join('');
 
-        $container.html(`<div class="rm-var-cards">${cards}</div>`);
+        $container.html(`<div class="rm-var-galleries">${sections}</div>`);
 
-        // Bind media picker for each card
-        $container.find('.rm-var-img-btn').on('click', function (e) {
+        // ---- Media picker: Add image ----
+        $container.find('.rm-var-gal-add').on('click', function (e) {
             e.stopPropagation();
-            const $btn      = $(this);
-            const parentId  = parseInt($btn.data('parent-id'));
+            const $btn       = $(this);
+            const parentId   = parseInt($btn.data('parent-id'));
             const galleryKey = $btn.data('gallery-key');
-            const $card     = $btn.closest('.rm-var-card');
+            const varId      = $btn.data('var-id');
+            const $thumbs    = $(`#rm-var-gal-thumbs-${varId}`);
 
             if (typeof wp === 'undefined' || !wp.media) {
                 showToast('Media library no disponible', 'error');
@@ -536,11 +544,10 @@
             });
 
             frame.on('select', function () {
-                const att  = frame.state().get('selection').first().toJSON();
+                const att    = frame.state().get('selection').first().toJSON();
                 const imgId  = att.id;
-                const imgUrl = att.sizes && att.sizes.thumbnail
-                    ? att.sizes.thumbnail.url
-                    : att.url;
+                const imgUrl = (att.sizes && att.sizes.thumbnail)
+                    ? att.sizes.thumbnail.url : att.url;
 
                 fetch(`${REST}product/${parentId}/variation-image`, {
                     method: 'POST', headers: restHeaders(),
@@ -549,10 +556,7 @@
                 .then(r => r.json())
                 .then(res => {
                     if (res.success) {
-                        // Update thumbnail in card
-                        const $wrap = $card.find('.rm-var-img-wrap');
-                        $wrap.find('img, .rm-var-thumb-empty').remove();
-                        $wrap.prepend(`<img src="${escHtml(res.image_url || imgUrl)}" class="rm-var-thumb" alt="">`);
+                        $thumbs.html(`<img src="${escHtml(res.image_url || imgUrl)}" class="rm-var-gal-img" alt="" data-img-id="${imgId}">`);
                         showToast('✅ Imagen guardada', 'success');
                     } else {
                         showToast(res.error || 'Error al guardar imagen', 'error');
@@ -562,6 +566,32 @@
             });
 
             frame.open();
+        });
+
+        // ---- Delete: clear image from gallery key ----
+        $container.find('.rm-var-gal-delete').on('click', function (e) {
+            e.stopPropagation();
+            if (!confirm('¿Quitar la imagen de esta variante?')) return;
+            const $btn       = $(this);
+            const parentId   = parseInt($btn.data('parent-id'));
+            const galleryKey = $btn.data('gallery-key');
+            const $section   = $btn.closest('.rm-var-gallery-section');
+            const varId      = $section.data('var-id');
+
+            fetch(`${REST}product/${parentId}/variation-image`, {
+                method: 'POST', headers: restHeaders(),
+                body: JSON.stringify({ gallery_key: galleryKey, image_id: 0 }),
+            })
+            .then(r => r.json())
+            .then(res => {
+                if (res.success) {
+                    $(`#rm-var-gal-thumbs-${varId}`).empty();
+                    showToast('Imagen eliminada', 'success');
+                } else {
+                    showToast(res.error || 'Error al eliminar', 'error');
+                }
+            })
+            .catch(() => showToast('Error de conexión', 'error'));
         });
     }
 

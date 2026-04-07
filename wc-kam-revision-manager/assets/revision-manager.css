@@ -1283,7 +1283,7 @@ col.col-actions      { width: 42px; }
 .rm-cats-opt-empty { color: var(--rm-text-dim); cursor: default; font-style: italic; }
 
 /* ================================================================
-   VARIATION EXPAND — Sub-row & Cards
+   VARIATION EXPAND — Sub-row & Attribute Galleries
    ================================================================ */
 
 /* Expand toggle button in col-info */
@@ -1320,20 +1320,19 @@ col.col-actions      { width: 42px; }
 .rm-row-variable .col-info .rm-prod-name,
 .rm-row-variable .col-info .rm-prod-sku,
 .rm-row-variable .col-info .rm-prod-status {
-  /* These are inline blocks but we need them in a flex-column sub-group */
   flex: 0 0 100%;
-  margin-left: 23px; /* indent under toggle */
+  margin-left: 23px;
 }
 .rm-row-variable .col-info .rm-prod-name { margin-top: 0; }
 
 /* Variations sub-row */
 .rm-variations-row td {
   padding: 0 !important;
-  background: #11151f;
+  background: #0d111a;
   border-bottom: 2px solid var(--rm-border);
 }
 .rm-var-container {
-  padding: 12px 16px 14px 48px;
+  padding: 10px 20px 14px 48px;
 }
 .rm-var-loading,
 .rm-var-error,
@@ -1351,115 +1350,109 @@ col.col-actions      { width: 42px; }
   border-width: 2px;
 }
 
-/* Grid of variation cards */
-.rm-var-cards {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-.rm-var-card {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  background: var(--rm-surface2);
-  border: 1px solid var(--rm-border);
-  border-radius: var(--rm-radius);
-  padding: 8px 10px;
-  min-width: 200px;
-  max-width: 260px;
-  transition: border-color .15s;
-}
-.rm-var-card:hover {
-  border-color: var(--rm-blue);
-}
-
-/* Image area */
-.rm-var-img-wrap {
-  position: relative;
-  flex-shrink: 0;
-  width: 60px;
-  height: 60px;
-}
-.rm-var-thumb {
-  width: 60px;
-  height: 60px;
-  object-fit: cover;
-  border-radius: 4px;
-  display: block;
-}
-.rm-var-thumb-empty {
-  width: 60px;
-  height: 60px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--rm-surface);
-  border: 1px dashed var(--rm-border);
-  border-radius: 4px;
-  font-size: 20px;
-  color: var(--rm-text-dim);
-}
-.rm-var-img-btn {
-  display: none;
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: rgba(0,0,0,.65);
-  color: #fff;
-  border: none;
-  border-radius: 0 0 4px 4px;
-  font-size: 10px;
-  padding: 2px 0;
-  cursor: pointer;
-  text-align: center;
-  white-space: nowrap;
-}
-.rm-var-img-wrap:hover .rm-var-img-btn {
-  display: block;
-}
-
-/* Info area */
-.rm-var-info {
+/* ---- Attribute Galleries (reference layout) ---- */
+.rm-var-galleries {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  min-width: 0;
+  gap: 8px;
 }
-.rm-var-sku {
-  font-family: var(--rm-mono);
-  font-size: 11px;
-  color: var(--rm-text);
-  font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.rm-var-attrs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 3px;
-}
-.rm-attr-chip {
-  font-size: 10px;
+
+.rm-var-gallery-section {
   background: var(--rm-surface);
   border: 1px solid var(--rm-border);
-  border-radius: 3px;
-  padding: 1px 5px;
-  color: var(--rm-text-muted);
-  white-space: nowrap;
+  border-radius: var(--rm-radius);
+  overflow: hidden;
 }
-.rm-attr-chip b {
+
+/* Header row */
+.rm-var-gal-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 12px;
+  border-bottom: 1px solid var(--rm-border);
+  background: var(--rm-surface2);
+}
+.rm-var-gal-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .07em;
   color: var(--rm-text);
-  font-weight: 500;
+  text-transform: uppercase;
+  font-family: var(--rm-mono);
+  flex: 1;
 }
-.rm-var-key {
-  font-size: 9px;
-  color: var(--rm-text-dim);
+.rm-var-gal-sku {
+  font-size: 10px;
+  color: var(--rm-text-muted);
   font-family: var(--rm-mono);
 }
-.rm-var-key code {
-  background: none;
-  font-family: inherit;
-  color: inherit;
+.rm-var-gal-delete {
+  margin-left: auto;
+  background: transparent;
+  border: 1px solid var(--rm-border);
+  border-radius: 3px;
+  color: var(--rm-text-muted);
+  font-size: 11px;
+  padding: 2px 9px;
+  cursor: pointer;
+  transition: border-color .15s, color .15s;
+}
+.rm-var-gal-delete:hover {
+  border-color: var(--rm-red);
+  color: var(--rm-red);
+}
+
+/* Body: images + add button */
+.rm-var-gal-body {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  flex-wrap: wrap;
+}
+.rm-var-gal-thumbs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.rm-var-gal-img {
+  width: 62px;
+  height: 62px;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 1px solid var(--rm-border);
+  display: block;
+}
+
+/* Add images button */
+.rm-var-gal-add {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 62px;
+  height: 62px;
+  background: transparent;
+  border: 1.5px dashed var(--rm-border);
+  border-radius: 4px;
+  color: var(--rm-text-muted);
+  cursor: pointer;
+  font-size: 10px;
+  transition: border-color .15s, color .15s;
+  padding: 0;
+}
+.rm-var-gal-add:hover {
+  border-color: var(--rm-blue);
+  color: var(--rm-blue);
+}
+.rm-var-gal-add svg {
+  display: block;
+  flex-shrink: 0;
+}
+.rm-var-gal-add span {
+  line-height: 1;
+  white-space: nowrap;
 }
