@@ -1,9 +1,11 @@
 import asyncio
 import logging
+import os
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
 
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
@@ -13,13 +15,15 @@ from odoo_client import OdooClient
 from ml_client import MLClient
 from demo_data import get_demo_dashboard
 
+load_dotenv()
+
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 logger = logging.getLogger(__name__)
 
-MONTHLY_GOAL = 14_000_000  # MXN
-GOAL_MONTH = "Abril 2026"
-GOAL_YEAR = 2026
-GOAL_MONTH_NUM = 4
+MONTHLY_GOAL  = int(os.getenv("MONTHLY_GOAL", "14000000"))
+GOAL_MONTH    = os.getenv("GOAL_MONTH", "Abril 2026")
+GOAL_YEAR     = int(os.getenv("GOAL_YEAR", "2026"))
+GOAL_MONTH_NUM = int(os.getenv("GOAL_MONTH_NUM", "4"))
 
 app = FastAPI(title="Sales Dashboard API")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])

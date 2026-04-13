@@ -268,36 +268,37 @@ class MLClient:
         return slow[:25]
 
     async def get_monthly_trend(self, account: str, months: int = 6) -> list:
-        now = datetime.now()
-        # Fetch last 6 months in one call
-        date_from = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        now = datetime.utcnow()
+
+        # Build list of (month_start, month_end, ym, label) for each month
+        month_ranges = []
+        cursor = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         for _ in range(months - 1):
-            first_of_month = date_from
-            date_from = (first_of_month - timedelta(days=1)).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            cursor = (cursor - timedelta(days=1)).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
-        orders = await self.get_orders(account, date_from, now)
-
-        # Group by YYYY-MM
-        by_month: dict = {}
-        for order in orders:
-            ym = (order.get("date_created") or "")[:7]
-            if not ym:
-                continue
-            if ym not in by_month:
-                by_month[ym] = {"sales": 0, "orders": 0}
-            by_month[ym]["orders"] += 1
-            by_month[ym]["sales"] += order.get("total_amount", 0) or 0
-
-        # Build ordered list for last N months
-        result = []
-        cursor = date_from
         for _ in range(months):
-            ym = cursor.strftime("%Y-%m")
-            month_name = cursor.strftime("%b %Y")
-            data = by_month.get(ym, {"sales": 0, "orders": 0})
-            result.append({"month": month_name, "year_month": ym, "sales": round(data["sales"], 2), "orders": data["orders"]})
-            # advance to next month
-            next_m = (cursor.replace(day=28) + timedelta(days=4)).replace(day=1)
-            cursor = next_m
+            next_month = (cursor.replace(day=28) + timedelta(days=4)).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            month_end = min(next_month, now)
+            month_ranges.append((cursor, month_end, cursor.strftime("%Y-%m"), cursor.strftime("%b %Y")))
+            cursor = next_month
+
+        # Fetch each month in parallel — avoids ML API pagination cap spreading across months
+        order_lists = await asyncio.gather(
+            *[self.get_orders(account, m_start, m_end) for m_start, m_end, _, _ in month_ranges],
+            return_exceptions=True,
+        )
+
+        result = []
+        for (m_start, m_end, ym, label), orders in zip(month_ranges, order_lists):
+            if isinstance(orders, Exception):
+                result.append({"month": label, "year_month": ym, "sales": 0, "orders": 0})
+                continue
+            total_sales = sum(o.get("total_amount", 0) or 0 for o in orders)
+            result.append({
+                "month": label,
+                "year_month": ym,
+                "sales": round(total_sales, 2),
+                "orders": len(orders),
+            })
 
         return result
