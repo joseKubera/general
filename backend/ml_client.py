@@ -39,11 +39,23 @@ class MLClient:
         self._session: Optional[aiohttp.ClientSession] = None
 
     def _load_tokens(self) -> dict:
+        # Always start from env-var tokens so stale tokens.json never overrides .env
+        tokens = {account: dict(data) for account, data in INITIAL_TOKENS.items()}
+        # Overlay only access/refresh tokens that were refreshed during a previous session
         if TOKENS_FILE.exists():
-            with open(TOKENS_FILE) as f:
-                return json.load(f)
-        self._save_tokens(INITIAL_TOKENS)
-        return dict(INITIAL_TOKENS)
+            try:
+                with open(TOKENS_FILE) as f:
+                    cached = json.load(f)
+                for account, data in cached.items():
+                    if account in tokens and data.get("access_token") and data.get("refresh_token"):
+                        # Only use cached tokens if they come from the same app (same seller_id)
+                        if data.get("seller_id") == tokens[account].get("seller_id"):
+                            tokens[account]["access_token"] = data["access_token"]
+                            tokens[account]["refresh_token"] = data["refresh_token"]
+            except Exception as e:
+                logger.warning(f"Could not load tokens.json, using env tokens: {e}")
+        self._save_tokens(tokens)
+        return tokens
 
     def _save_tokens(self, tokens: dict):
         with open(TOKENS_FILE, "w") as f:
@@ -96,28 +108,47 @@ class MLClient:
         all_orders = []
         offset = 0
         limit = 50
+        from_str = date_from.strftime("%Y-%m-%d")
+        to_str   = date_to.strftime("%Y-%m-%d")
 
         while True:
             params = {
                 "seller": seller_id,
                 "order.status": "paid",
                 "sort": "date_desc",
-                "date_created.from": date_from.strftime("%Y-%m-%dT%H:%M:%S.000-00:00"),
-                "date_created.to": date_to.strftime("%Y-%m-%dT%H:%M:%S.000-00:00"),
+                "date_created.from": date_from.strftime("%Y-%m-%dT%H:%M:%S.000+00:00"),
+                "date_created.to":   date_to.strftime("%Y-%m-%dT%H:%M:%S.000+00:00"),
                 "offset": offset,
                 "limit": limit,
             }
             data = await self._get(account, "/orders/search", params)
             results = data.get("results", [])
+            if not results:
+                break
+
             all_orders.extend(results)
+
+            # Early exit: if the oldest result in this page is before date_from,
+            # the API filter may not be working — stop and filter client-side.
+            oldest = (results[-1].get("date_created") or "")[:10]
+            if oldest and oldest < from_str:
+                logger.warning(
+                    f"[{account}] API date filter may be broken — got order from {oldest} "
+                    f"(expected >= {from_str}). Stopping pagination and filtering client-side."
+                )
+                break
 
             paging = data.get("paging", {})
             total = paging.get("total", 0)
-            if offset + limit >= total or not results:
+            if offset + limit >= total:
                 break
             offset += limit
 
-        return all_orders
+        # Client-side safety filter: only keep orders within the requested range
+        return [
+            o for o in all_orders
+            if from_str <= (o.get("date_created") or "")[:10] <= to_str
+        ]
 
     async def get_user_items(self, account: str, status: str = "active", limit_items: int = 200) -> list:
         seller_id = self.tokens[account]["seller_id"]
@@ -188,7 +219,7 @@ class MLClient:
 
     async def get_daily_conversion(self, account: str, days: int = 30) -> list:
         """Return list of {date, orders, visits, rate} for last N days"""
-        now = datetime.now()
+        now = datetime.utcnow()
         date_from = now - timedelta(days=days)
 
         orders, item_ids = await asyncio.gather(
