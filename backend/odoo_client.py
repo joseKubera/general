@@ -1,15 +1,20 @@
 import xmlrpc.client
 import asyncio
 import logging
+import os
 from datetime import datetime, timedelta
 from typing import Optional
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 logger = logging.getLogger(__name__)
 
-ODOO_URL = "https://ifullmx-brea.odoo.com"
-ODOO_DB = "ifullmx-brea-main-6396587"
-ODOO_USER = "jose@kubera.mx"
-ODOO_PASSWORD = "dc2be900dfcf1cc596dec0919d129ebb549daeb7"
+ODOO_URL = os.getenv("ODOO_URL")
+ODOO_DB = os.getenv("ODOO_DB")
+ODOO_USER = os.getenv("ODOO_USER")
+ODOO_PASSWORD = os.getenv("ODOO_PASSWORD")
 
 
 class OdooClient:

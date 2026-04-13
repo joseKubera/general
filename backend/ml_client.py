@@ -2,28 +2,33 @@ import aiohttp
 import asyncio
 import json
 import logging
+import os
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 logger = logging.getLogger(__name__)
 
-APP_ID = "8902165405612832"
-SECRET_KEY = "CQeXfw4DjRWaMlg3ouTQIF134vctDxLi"
+APP_ID = os.getenv("ML_APP_ID")
+SECRET_KEY = os.getenv("ML_SECRET_KEY")
 BASE_URL = "https://api.mercadolibre.com"
 
 TOKENS_FILE = Path(__file__).parent / "tokens.json"
 
 INITIAL_TOKENS = {
     "SANCORFASHION": {
-        "seller_id": "3064478475",
-        "access_token": "APP_USR-8902165405612832-032411-199d586c572d4dd86ba618e3ffa03582-3064478475",
-        "refresh_token": "TG-69c2b0fdc6267d0001c3a9d9-3064478475",
+        "seller_id": os.getenv("ML_SF_SELLER_ID"),
+        "access_token": os.getenv("ML_SF_ACCESS_TOKEN"),
+        "refresh_token": os.getenv("ML_SF_REFRESH_TOKEN"),
     },
     "BEKURA": {
-        "seller_id": "3072519654",
-        "access_token": "APP_USR-8902165405612832-033112-1fc32ceb54ed9e31d459246dbee86831-3072519654",
-        "refresh_token": "TG-69cbf444d19bf40001f615e1-3072519654",
+        "seller_id": os.getenv("ML_BK_SELLER_ID"),
+        "access_token": os.getenv("ML_BK_ACCESS_TOKEN"),
+        "refresh_token": os.getenv("ML_BK_REFRESH_TOKEN"),
     },
 }
 
